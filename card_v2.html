@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>指尖星辰 - 圣诞快乐</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: 'PingFang SC', sans-serif; }
+        canvas { display: block; }
+        
+        #instruction {
+            position: absolute; top: 50%; width: 100%; text-align: center;
+            color: rgba(255,255,255,0.6); font-size: 14px; pointer-events: none;
+            transition: opacity 1s; z-index: 100;
+        }
+
+        #letter {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; background: rgba(255, 255, 255, 0.95); padding: 30px 20px;
+            border-radius: 20px; box-shadow: 0 0 30px #ff0000;
+            display: none; text-align: center; z-index: 1000;
+        }
+        
+        #letter h2 { color: #d63031; margin-top: 0; }
+        #letter p { color: #2d3436; line-height: 1.8; font-size: 15px; }
+        .tree-icon { font-size: 50px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="instruction">长按屏幕 2 秒，许下圣诞愿望</div>
+
+    <div id="letter">
+        <div class="tree-icon">🎄</div>
+        <h2>Dear My Love</h2>
+        <p id="typewriter"></p>
+        <button onclick="location.reload()" style="margin-top:20px; border:none; background:#d63031; color:white; padding:8px 20px; border-radius:15px;">再看一次</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const instruction = document.getElementById('instruction');
+        const letter = document.getElementById('letter');
+        const typewriter = document.getElementById('typewriter');
+
+        let width, height, lastX, lastY;
+        let particles = [];
+        let pressTimer;
+        const colors = ['#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF', '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE', '#B2FF59', '#EEFF41', '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40'];
+
+        function init() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                this.size = Math.random() * 3 + 1;
+                this.vx = (Math.random() - 0.5) * 5;
+                this.vy = (Math.random() - 0.5) * 5;
+                this.life = 1;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                this.life -= 0.015;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 触摸/手势处理
+        function handleMove(e) {
+            const t = e.touches ? e.touches[0] : e;
+            for(let i=0; i<3; i++) {
+                particles.push(new Particle(t.clientX, t.clientY, colors[Math.floor(Math.random()*colors.length)]));
+            }
+            instruction.style.opacity = 0;
+        }
+
+        function startPress(e) {
+            pressTimer = setTimeout(showSurprise, 2000); // 长按2秒
+        }
+
+        function endPress() {
+            clearTimeout(pressTimer);
+        }
+
+        function showSurprise() {
+            letter.style.display = 'block';
+            const msg = "这是为你点亮的第 [N] 颗星。希望能用指尖的微光，照亮你整个冬天的温暖。圣诞快乐，宝贝！";
+            let i = 0;
+            typewriter.innerHTML = "";
+            function type() {
+                if (i < msg.length) {
+                    typewriter.innerHTML += msg.charAt(i);
+                    i++; setTimeout(type, 100);
+                }
+            }
+            type();
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fillRect(0, 0, width, height);
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', init);
+        canvas.addEventListener('touchstart', startPress);
+        canvas.addEventListener('touchend', endPress);
+        canvas.addEventListener('touchmove', handleMove);
+        // 兼容PC测试
+        canvas.addEventListener('mousedown', startPress);
+        canvas.addEventListener('mouseup', endPress);
+        canvas.addEventListener('mousemove', handleMove);
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
