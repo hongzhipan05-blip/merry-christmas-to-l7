@@ -13,9 +13,9 @@
             position: absolute; top: 50%; width: 100%; text-align: center;
             color: rgba(255,255,255,0.6); font-size: 16px; pointer-events: none;
             z-index: 100; letter-spacing: 2px; transform: translateY(-50%);
+            transition: opacity 0.5s;
         }
 
-        /* 四角星星样式 */
         .corner-star {
             position: absolute; width: 60px; height: 60px;
             display: flex; align-items: center; justify-content: center;
@@ -36,18 +36,18 @@
             padding: 40px 25px; border-radius: 30px; 
             box-shadow: 0 10px 60px rgba(214, 48, 49, 0.6);
             display: none; text-align: center; z-index: 1000;
-            opacity: 0; transition: opacity 1s ease-in;
+            opacity: 0; transition: opacity 0.8s ease;
         }
         
         #letter h2 { font-family: 'Dancing Script', cursive; font-size: 32px; margin: 10px 0; background: linear-gradient(45deg, #d63031, #e84393); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #letter p { color: #2d3436; line-height: 2; font-size: 16px; margin: 20px 0; text-align: justify; }
+        #letter p { color: #2d3436; line-height: 2; font-size: 16px; margin: 20px 0; text-align: justify; height: 120px; }
         .tree-icon { font-size: 45px; margin-bottom: 5px; }
-        .btn-refresh { margin-top: 15px; border: none; background: #d63031; color: white; padding: 10px 25px; border-radius: 25px; font-size: 14px; }
+        .btn-refresh { margin-top: 15px; border: none; background: #d63031; color: white; padding: 10px 25px; border-radius: 25px; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="instruction">007，圣诞快乐🎉</div>
+    <div id="instruction">Dear 07，圣诞快乐🎉</div>
 
     <div id="star-tl" class="corner-star" onclick="unlockStar(0, this)">⭐</div>
     <div id="star-tr" class="corner-star" onclick="unlockStar(1, this)">⭐</div>
@@ -58,11 +58,10 @@
         <div class="tree-icon">🎄</div>
         <h2>Dear My Love</h2>
         <p id="typewriter"></p>
-        <button class="btn-refresh" onclick="location.reload()">再看一次</button>
+        <button class="btn-refresh" onclick="resetExperience()">再看一次</button>
     </div>
 
     <audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
-
     <canvas id="canvas"></canvas>
 
     <script>
@@ -74,10 +73,8 @@
         const bgm = document.getElementById('bgm');
 
         let width, height, particles = [], fireworks = [];
-        let audioStarted = false;
         let unlockedCount = 0;
         const starsState = [false, false, false, false];
-
         const colors = ['#FFD700', '#FFFFFF', '#FF5252', '#FF4081', '#E040FB', '#18FFFF', '#64FFDA'];
 
         function init() {
@@ -86,14 +83,11 @@
         }
 
         function tryStartAudio() {
-            if (!audioStarted) {
-                bgm.play().then(() => {
-                    audioStarted = true;
-                }).catch(err => console.log("等待交互中..."));
+            if (bgm.paused) {
+                bgm.play().catch(err => console.log("等待交互..."));
             }
         }
 
-        // 解锁逻辑
         function unlockStar(index, el) {
             tryStartAudio();
             if (starsState[index]) return;
@@ -102,7 +96,6 @@
             unlockedCount++;
             el.classList.add('active');
             
-            // 在星星位置放个小烟花反馈
             const rect = el.getBoundingClientRect();
             createFireworkExplosion(rect.left + 30, rect.top + 30, 30);
 
@@ -110,6 +103,30 @@
                 instruction.style.opacity = 0;
                 showSurprise();
             }
+        }
+
+        // --- 新增重置逻辑 ---
+        function resetExperience() {
+            // 1. 隐藏信件
+            letter.style.opacity = 0;
+            setTimeout(() => {
+                letter.style.display = 'none';
+                typewriter.innerHTML = "";
+                
+                // 2. 重置星星和计数
+                unlockedCount = 0;
+                starsState.fill(false);
+                document.querySelectorAll('.corner-star').forEach(s => {
+                    s.style.display = 'flex';
+                    s.classList.remove('active');
+                });
+
+                // 3. 恢复提示文字
+                instruction.style.opacity = 1;
+            }, 800);
+
+            // 撒点小火花表示重置了
+            createFireworkExplosion(width/2, height/2, 40);
         }
 
         class Particle {
@@ -163,21 +180,20 @@
         }
 
         function showSurprise() {
-            // 隐藏所有星星
-            document.querySelectorAll('.corner-star').forEach(s => s.style.display = 'none');
-            
-            // 连环烟花
-            for(let j=0; j<5; j++) {
-                setTimeout(() => {
-                    createFireworkExplosion(width/2 + (Math.random()-0.5)*200, height/2 + (Math.random()-0.5)*200, 60);
-                }, j * 300);
-            }
-            
             setTimeout(() => {
-                letter.style.display = 'block';
-                setTimeout(() => { letter.style.opacity = 1; }, 100);
-                startTypewriter();
-            }, 1500);
+                document.querySelectorAll('.corner-star').forEach(s => s.style.display = 'none');
+                for(let j=0; j<5; j++) {
+                    setTimeout(() => {
+                        createFireworkExplosion(width/2 + (Math.random()-0.5)*200, height/2 + (Math.random()-0.5)*200, 60);
+                    }, j * 300);
+                }
+                
+                setTimeout(() => {
+                    letter.style.display = 'block';
+                    setTimeout(() => { letter.style.opacity = 1; }, 100);
+                    startTypewriter();
+                }, 1500);
+            }, 500);
         }
 
         function createFireworkExplosion(x, y, count) {
@@ -191,6 +207,9 @@
             const msg = "这是为你点亮的星辰。希望能用四角的微光，汇聚成照亮你整个冬天的温暖。愿你的世界永远纯粹、快乐。圣诞快乐！";
             let i = 0; typewriter.innerHTML = "";
             function type() {
+                // 如果在打字过程中点重置，就停止
+                if (letter.style.display === 'none') return; 
+                
                 if (i < msg.length) {
                     typewriter.innerHTML += msg.charAt(i);
                     i++; setTimeout(type, 100);
@@ -210,7 +229,6 @@
         }
 
         window.addEventListener('resize', init);
-        // 全局触摸/点击支持
         window.addEventListener('touchstart', tryStartAudio);
         window.addEventListener('mousedown', tryStartAudio);
         canvas.addEventListener('touchmove', handleMove);
