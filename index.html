@@ -11,7 +11,7 @@
         
         #instruction {
             position: absolute; top: 50%; width: 100%; text-align: center;
-            color: rgba(255,255,255,0.6); font-size: 16px; pointer-events: none;
+            color: rgba(255,255,255,0.5); font-size: 16px; pointer-events: none;
             z-index: 100; letter-spacing: 2px; transform: translateY(-50%);
             transition: opacity 0.5s;
         }
@@ -20,7 +20,8 @@
             position: absolute; width: 60px; height: 60px;
             display: flex; align-items: center; justify-content: center;
             font-size: 30px; cursor: pointer; z-index: 2000;
-            transition: all 0.3s; filter: grayscale(1) opacity(0.5);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            filter: grayscale(1) opacity(0.3);
         }
         .corner-star.active { filter: grayscale(0) opacity(1); transform: scale(1.5); text-shadow: 0 0 20px #FFD700; }
         
@@ -31,23 +32,24 @@
 
         #letter {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 85%; max-width: 320px; background: rgba(255, 255, 255, 0.94); 
+            width: 85%; max-width: 320px; background: rgba(255, 255, 255, 0.9); 
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             padding: 40px 25px; border-radius: 30px; 
-            box-shadow: 0 10px 60px rgba(214, 48, 49, 0.6);
+            box-shadow: 0 10px 50px rgba(214, 48, 49, 0.4);
             display: none; text-align: center; z-index: 1000;
-            opacity: 0; transition: opacity 0.8s ease;
+            opacity: 0; transition: opacity 1s ease;
         }
         
-        #letter h2 { font-family: 'Dancing Script', cursive; font-size: 32px; margin: 10px 0; background: linear-gradient(45deg, #d63031, #e84393); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #letter p { color: #2d3436; line-height: 2; font-size: 16px; margin: 20px 0; text-align: justify; height: 120px; }
-        .tree-icon { font-size: 45px; margin-bottom: 5px; }
-        .btn-refresh { margin-top: 15px; border: none; background: #d63031; color: white; padding: 10px 25px; border-radius: 25px; font-size: 14px; cursor: pointer; }
+        #letter h2 { font-family: 'Dancing Script', cursive; font-size: 30px; margin: 10px 0; background: linear-gradient(45deg, #d63031, #e84393); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #letter p { color: #2d3436; line-height: 1.8; font-size: 15px; margin: 20px 0; text-align: justify; height: 110px; }
+        .tree-icon { font-size: 40px; margin-bottom: 5px; }
+        .btn-refresh { border: none; background: #d63031; color: white; padding: 10px 25px; border-radius: 20px; font-size: 13px; cursor: pointer; transition: transform 0.2s; }
     </style>
 </head>
 <body>
 
-    <div id="instruction">Dear 07，圣诞快乐🎉</div>
+    <div id="instruction">Dear 07， Merry Christmas!
+    </div>
 
     <div id="star-tl" class="corner-star" onclick="unlockStar(0, this)">⭐</div>
     <div id="star-tr" class="corner-star" onclick="unlockStar(1, this)">⭐</div>
@@ -83,111 +85,109 @@
         }
 
         function tryStartAudio() {
-            if (bgm.paused) {
-                bgm.play().catch(err => console.log("等待交互..."));
-            }
+            if (bgm.paused) { bgm.play().catch(e => {}); }
         }
 
         function unlockStar(index, el) {
             tryStartAudio();
             if (starsState[index]) return;
-
             starsState[index] = true;
             unlockedCount++;
             el.classList.add('active');
             
-            const rect = el.getBoundingClientRect();
-            createFireworkExplosion(rect.left + 30, rect.top + 30, 30);
-
+            // 触发星星处的炸裂效果
+            createFireworkExplosion(el.offsetLeft + 30, el.offsetTop + 30, 30);
+            
             if (unlockedCount === 4) {
                 instruction.style.opacity = 0;
                 showSurprise();
             }
         }
 
-        // --- 新增重置逻辑 ---
         function resetExperience() {
-            // 1. 隐藏信件
             letter.style.opacity = 0;
             setTimeout(() => {
                 letter.style.display = 'none';
                 typewriter.innerHTML = "";
-                
-                // 2. 重置星星和计数
                 unlockedCount = 0;
                 starsState.fill(false);
                 document.querySelectorAll('.corner-star').forEach(s => {
                     s.style.display = 'flex';
                     s.classList.remove('active');
                 });
-
-                // 3. 恢复提示文字
                 instruction.style.opacity = 1;
             }, 800);
-
-            // 撒点小火花表示重置了
-            createFireworkExplosion(width/2, height/2, 40);
         }
 
+        // --- 核心类：实现浅浅消散的效果 ---
         class Particle {
             constructor(x, y) {
-                this.x = x; this.y = y;
+                this.x = x;
+                this.y = y;
                 this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.size = Math.random() * 2 + 0.5;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
-                this.life = 1.0;
-                this.decay = 0.02;
+                this.size = Math.random() * 2 + 1;
+                this.vx = (Math.random() - 0.5) * 5;
+                this.vy = (Math.random() - 0.5) * 5;
+                this.life = 1.0; 
+                this.decay = Math.random() * 0.02 + 0.015; // 控制消散速度
+                this.friction = 0.96; // 摩擦力：让粒子慢慢停下来
             }
-            update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; }
+            update() {
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+            }
             draw() {
-                ctx.globalAlpha = this.life;
+                if(this.life <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = this.life; // 随生命周期淡出
                 ctx.fillStyle = this.color;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 10 * this.life; // 发光效果也随之减弱
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
             }
         }
 
-        class Firework {
+        class Firework extends Particle {
             constructor(x, y, color) {
-                this.x = x; this.y = y; this.color = color;
-                this.size = Math.random() * 3 + 1;
-                const angle = Math.random() * Math.PI * 2;
-                const force = Math.random() * 8 + 2;
-                this.vx = Math.cos(angle) * force;
-                this.vy = Math.sin(angle) * force;
-                this.life = 1.0;
-                this.gravity = 0.15;
+                super(x, y);
+                this.color = color;
+                this.vx = (Math.random() - 0.5) * 12;
+                this.vy = (Math.random() - 0.5) * 12;
+                this.gravity = 0.12;
+                this.decay = Math.random() * 0.01 + 0.01;
             }
             update() {
-                this.vx *= 0.95; this.vy *= 0.95;
-                this.vy += this.gravity; 
-                this.x += this.vx; this.y += this.vy;
-                this.life -= 0.015;
-            }
-            draw() {
-                ctx.globalAlpha = this.life;
-                ctx.fillStyle = this.color;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                this.vy += this.gravity;
+                super.update();
             }
         }
 
         function handleMove(e) {
             tryStartAudio();
             const t = e.touches ? e.touches[0] : e;
-            for(let i=0; i<2; i++) {
-                particles.push(new Particle(t.clientX, t.clientY));
+            // 限制粒子密度，保证流畅度
+            if (particles.length < 200) {
+                for(let i = 0; i < 2; i++) {
+                    particles.push(new Particle(t.clientX, t.clientY));
+                }
             }
         }
 
         function showSurprise() {
             setTimeout(() => {
                 document.querySelectorAll('.corner-star').forEach(s => s.style.display = 'none');
+                // 中央礼花绽放
                 for(let j=0; j<5; j++) {
                     setTimeout(() => {
-                        createFireworkExplosion(width/2 + (Math.random()-0.5)*200, height/2 + (Math.random()-0.5)*200, 60);
+                        createFireworkExplosion(width/2 + (Math.random()-0.5)*100, height/2 + (Math.random()-0.5)*100, 50);
                     }, j * 300);
                 }
-                
                 setTimeout(() => {
                     letter.style.display = 'block';
                     setTimeout(() => { letter.style.opacity = 1; }, 100);
@@ -207,9 +207,7 @@
             const msg = "这是为你点亮的星辰。希望能用四角的微光，汇聚成照亮你整个冬天的温暖。愿你的世界永远纯粹、快乐。圣诞快乐！";
             let i = 0; typewriter.innerHTML = "";
             function type() {
-                // 如果在打字过程中点重置，就停止
                 if (letter.style.display === 'none') return; 
-                
                 if (i < msg.length) {
                     typewriter.innerHTML += msg.charAt(i);
                     i++; setTimeout(type, 100);
@@ -219,12 +217,16 @@
         }
 
         function animate() {
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            // 使用带有透明度的黑色矩形覆盖，产生轻微的长尾效果
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
             ctx.fillRect(0, 0, width, height);
+            
             particles = particles.filter(p => p.life > 0);
             particles.forEach(p => { p.update(); p.draw(); });
+            
             fireworks = fireworks.filter(f => f.life > 0);
             fireworks.forEach(f => { f.update(); f.draw(); });
+            
             requestAnimationFrame(animate);
         }
 
